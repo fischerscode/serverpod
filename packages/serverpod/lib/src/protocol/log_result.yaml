@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://go.fischerscode.com/serverpod-schema
+
 ### A list of log entries, used to return logging data.
 class: LogResult
 fields:

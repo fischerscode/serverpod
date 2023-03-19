@@ -1,0 +1,118 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Protocol file definition",
+    "oneOf": [
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "protocol file with fields",
+            "description": "class or exception",
+            "oneOf": [
+                {
+                    "title": "class",
+                    "type": "object",
+                    "properties": {
+                        "serverOnly": {
+                            "default": false,
+                            "type": "boolean"
+                        },
+                        "class": {
+                            "type": "string"
+                        },
+                        "table": {
+                            "type": "string"
+                        },
+                        "fields": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                "title": "field description",
+                                "oneOf": [
+                                    {
+                                        "type": "string"
+                                    }
+                                ]
+                            }
+                        },
+                        "indexes": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "title": "index definition",
+                                "type": "object",
+                                "properties": {
+                                    "fields": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "default": "btree",
+                                        "type": "string"
+                                    },
+                                    "unique": {
+                                        "default": false,
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": []
+                            }
+                        }
+                    },
+                    "required": [
+                        "class",
+                        "fields"
+                    ]
+                },
+                {
+                    "title": "exception",
+                    "type": "object",
+                    "properties": {
+                        "serverOnly": {
+                            "default": false,
+                            "type": "boolean"
+                        },
+                        "fields": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                "title": "field description",
+                                "oneOf": [
+                                    {
+                                        "type": "string"
+                                    }
+                                ]
+                            }
+                        },
+                        "exception": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "fields",
+                        "exception"
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "enum",
+            "type": "object",
+            "properties": {
+                "serverOnly": {
+                    "default": false,
+                    "type": "boolean"
+                },
+                "enum": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "enum",
+                "values"
+            ]
+        }
+    ]
+}

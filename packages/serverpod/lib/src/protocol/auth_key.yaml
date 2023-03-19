@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://go.fischerscode.com/serverpod-schema
+
 ### Provides a method of access for a user to authenticate with the server.
 class: AuthKey
 table: serverpod_auth_key

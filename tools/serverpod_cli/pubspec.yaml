@@ -8,7 +8,7 @@ description: Command line tools for Serverpod.
 repository: https://github.com/serverpod/serverpod
 
 environment:
-  sdk: '>=2.17.0 <3.0.0'
+  sdk: ">=2.17.0 <3.0.0"
 
 dependencies:
   archive: ^3.1.2
@@ -24,7 +24,7 @@ dependencies:
   source_span: ^1.9.1
   super_string: ^1.0.3
   watcher: ^1.0.0
-  analyzer: ^4.7.0
+  analyzer: ^5.4.0
   path: ^1.8.0
   uuid: ^3.0.5
   yaml: ^3.1.0
@@ -32,9 +32,14 @@ dependencies:
     path: ../../packages/serverpod_shared
   serverpod_service_client: #^1.0.0
     path: ../../packages/serverpod_service_client
+  schemed_annotation:
+    path: ../../../dart_schema_generator/packages/schemed_annotation
 
 dev_dependencies:
+  build_runner: ^2.3.3
   lints: ^2.0.0
+  schemed:
+    path: ../../../dart_schema_generator/packages/schemed
 
 executables:
   serverpod: serverpod_cli

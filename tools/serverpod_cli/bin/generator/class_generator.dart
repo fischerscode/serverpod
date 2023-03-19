@@ -6,6 +6,7 @@ import '../util/internal_error.dart';
 import 'class_generator_dart.dart';
 import 'code_analysis_collector.dart';
 import 'config.dart';
+import 'config/files.dart';
 import 'generator.dart';
 import 'pgsql_generator.dart';
 import 'protocol_definition.dart';
@@ -65,7 +66,7 @@ abstract class ClassGenerator {
     for (var classDefinition in classDefinitions) {
       var outputFile = File(p.joinAll([
         outputDirectoryPath,
-        ...?classDefinition.subDir?.split('/'),
+        ...?classDefinition.subDirectory?.split('/'),
         '${classDefinition.fileName}$outputExtension'
       ]));
 

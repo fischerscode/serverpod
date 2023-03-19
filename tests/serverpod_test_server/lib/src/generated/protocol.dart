@@ -75,7 +75,7 @@ class Protocol extends _i1.SerializationManagerServer {
       return customConstructors[t]!(data, this) as T;
     }
     if (t == _i2.ExceptionWithData) {
-      return _i2.ExceptionWithData.fromJson(data, this) as T;
+      return _i2.ExceptionWithData.fromJson(data) as T;
     }
     if (t == _i3.Nullability) {
       return _i3.Nullability.fromJson(data, this) as T;
@@ -132,8 +132,7 @@ class Protocol extends _i1.SerializationManagerServer {
       return _i20.Types.fromJson(data, this) as T;
     }
     if (t == _i1.getType<_i2.ExceptionWithData?>()) {
-      return (data != null ? _i2.ExceptionWithData.fromJson(data, this) : null)
-          as T;
+      return (data != null ? _i2.ExceptionWithData.fromJson(data) : null) as T;
     }
     if (t == _i1.getType<_i3.Nullability?>()) {
       return (data != null ? _i3.Nullability.fromJson(data, this) : null) as T;
@@ -202,10 +201,6 @@ class Protocol extends _i1.SerializationManagerServer {
     }
     if (t == _i1.getType<_i20.Types?>()) {
       return (data != null ? _i20.Types.fromJson(data, this) : null) as T;
-    }
-    if (t == List<String>) {
-      return (data as List).map((e) => deserialize<String>(e)).toList()
-          as dynamic;
     }
     if (t == List<int>) {
       return (data as List).map((e) => deserialize<int>(e)).toList() as dynamic;

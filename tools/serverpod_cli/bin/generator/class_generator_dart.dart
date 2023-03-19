@@ -3,6 +3,10 @@ import 'package:code_builder/code_builder.dart';
 
 import 'class_generator.dart';
 import 'config.dart';
+import 'config/class.dart';
+import 'config/enum.dart';
+import 'config/fields.dart';
+import 'config/files.dart';
 import 'protocol_definition.dart';
 import 'types.dart';
 
@@ -26,7 +30,7 @@ class ClassGeneratorDart extends ClassGenerator {
 
   @override
   Library generateFile(ProtocolFileDefinition protocolFileDefinition) {
-    if (protocolFileDefinition is ClassDefinition) {
+    if (protocolFileDefinition is ProtocolFileDefinitionWithFields) {
       return _generateClassFile(protocolFileDefinition);
     }
     if (protocolFileDefinition is EnumDefinition) {
@@ -37,9 +41,10 @@ class ClassGeneratorDart extends ClassGenerator {
   }
 
   // Handle ordinary classes
-  Library _generateClassFile(ClassDefinition classDefinition) {
-    String? tableName = classDefinition.tableName;
-    var className = classDefinition.className;
+  Library _generateClassFile(ProtocolFileDefinitionWithFields classDefinition) {
+    String? tableName =
+        classDefinition is ClassDefinition ? classDefinition.tableName : null;
+    var className = classDefinition.name;
     var fields = classDefinition.fields;
 
     var library = Library(
@@ -79,24 +84,24 @@ class ClassGeneratorDart extends ClassGenerator {
           }
 
           // Fields
-          for (var field in fields) {
-            if (field.shouldIncludeField(serverCode) &&
-                !(field.name == 'id' && serverCode && tableName != null)) {
+          for (var field in fields.entries) {
+            if (field.value.shouldIncludeField(serverCode) &&
+                !(field.key.name == 'id' && serverCode && tableName != null)) {
               classBuilder.fields.add(Field((f) {
-                f.type = field.type.reference(serverCode,
-                    subDirectory: classDefinition.subDir);
+                f.type = field.value.type.reference(serverCode,
+                    subDirectory: classDefinition.subDirectory);
                 f
-                  ..name = field.name
-                  ..docs.addAll(field.documentation ?? []);
+                  ..name = field.key.name
+                  ..docs.addAll(field.key.documentation ?? []);
               }));
             }
           }
 
           // Default constructor
           classBuilder.constructors.add(Constructor((c) {
-            for (var field in fields) {
-              if (field.shouldIncludeField(serverCode)) {
-                if (field.name == 'id' && serverCode && tableName != null) {
+            for (var field in fields.entries) {
+              if (field.value.shouldIncludeField(serverCode)) {
+                if (field.key.name == 'id' && serverCode && tableName != null) {
                   c.optionalParameters.add(Parameter((p) {
                     p.named = true;
                     p.name = 'id';
@@ -109,9 +114,9 @@ class ClassGeneratorDart extends ClassGenerator {
                 } else {
                   c.optionalParameters.add(Parameter((p) {
                     p.named = true;
-                    p.required = !field.type.nullable;
+                    p.required = !field.value.type.nullable;
                     p.toThis = true;
-                    p.name = field.name;
+                    p.name = field.key.name;
                   }));
                 }
               }
@@ -138,16 +143,16 @@ class ClassGeneratorDart extends ClassGenerator {
             ]);
             c.body = refer(className)
                 .call([], {
-                  for (var field in fields)
-                    if (field.shouldIncludeField(serverCode))
-                      field.name: refer('serializationManager')
+                  for (var field in fields.entries)
+                    if (field.value.shouldIncludeField(serverCode))
+                      field.key.name: refer('serializationManager')
                           .property('deserialize')
                           .call([
                         refer('jsonSerialization')
-                            .index(literalString(field.name))
+                            .index(literalString(field.key.name))
                       ], {}, [
-                        field.type.reference(serverCode,
-                            subDirectory: classDefinition.subDir)
+                        field.value.type.reference(serverCode,
+                            subDirectory: classDefinition.subDirectory)
                       ])
                 })
                 .returned
@@ -163,9 +168,9 @@ class ClassGeneratorDart extends ClassGenerator {
 
               m.body = literalMap(
                 {
-                  for (var field in fields)
-                    if (field.shouldSerializeField(serverCode))
-                      literalString(field.name): refer(field.name)
+                  for (var field in fields.entries)
+                    if (field.value.shouldSerializeField(serverCode))
+                      literalString(field.key.name): refer(field.key.name)
                 },
               ).returned.statement;
             },
@@ -183,9 +188,10 @@ class ClassGeneratorDart extends ClassGenerator {
 
                   m.body = literalMap(
                     {
-                      for (var field in fields)
-                        if (field.shouldSerializeFieldForDatabase(serverCode))
-                          literalString(field.name): refer(field.name)
+                      for (var field in fields.entries)
+                        if (field.value
+                            .shouldSerializeFieldForDatabase(serverCode))
+                          literalString(field.key.name): refer(field.key.name)
                     },
                   ).returned.statement;
                 },
@@ -200,8 +206,8 @@ class ClassGeneratorDart extends ClassGenerator {
 
                 m.body = literalMap(
                   {
-                    for (var field in fields)
-                      literalString(field.name): refer(field.name)
+                    for (var field in fields.entries)
+                      literalString(field.key.name): refer(field.key.name)
                   },
                   //  refer('String'), refer('dynamic')
                 ).returned.statement;
@@ -222,11 +228,11 @@ class ClassGeneratorDart extends ClassGenerator {
                 ])
                 ..body = Block.of([
                   const Code('switch(columnName){'),
-                  for (var field in fields)
-                    if (field.shouldSerializeFieldForDatabase(serverCode))
+                  for (var field in fields.entries)
+                    if (field.value.shouldSerializeFieldForDatabase(serverCode))
                       Block.of([
-                        Code('case \'${field.name}\':'),
-                        refer(field.name).assign(refer('value')).statement,
+                        Code('case \'${field.key.name}\':'),
+                        refer(field.key.name).assign(refer('value')).statement,
                         refer('').returned.statement,
                       ]),
                   const Code('default:'),
@@ -685,24 +691,24 @@ class ClassGeneratorDart extends ClassGenerator {
             }));
 
             // Column descriptions
-            for (var field in fields) {
-              if (field.shouldSerializeFieldForDatabase(serverCode)) {
+            for (var field in fields.entries) {
+              if (field.value.shouldSerializeFieldForDatabase(serverCode)) {
                 c.fields.add(Field((f) => f
                   ..modifier = FieldModifier.final$
-                  ..name = field.name
-                  ..docs.addAll(field.documentation ?? [])
+                  ..name = field.key.name
+                  ..docs.addAll(field.key.documentation ?? [])
                   ..assignment = TypeReference((t) => t
-                    ..symbol = field.type.columnType
+                    ..symbol = field.value.type.columnType
                     ..url = 'package:serverpod/serverpod.dart'
-                    ..types.addAll(field.type.isEnum
+                    ..types.addAll(field.value.type.isEnum
                         ? [
-                            field.type.reference(
+                            field.value.type.reference(
                               serverCode,
                               nullable: false,
-                              subDirectory: classDefinition.subDir,
+                              subDirectory: classDefinition.subDirectory,
                             )
                           ]
-                        : [])).call([literalString(field.name)]).code));
+                        : [])).call([literalString(field.key.name)]).code));
               }
             }
 
@@ -718,9 +724,9 @@ class ClassGeneratorDart extends ClassGenerator {
                 ..lambda = true
                 ..type = MethodType.getter
                 ..body = literalList([
-                  for (var field in fields)
-                    if (field.shouldSerializeFieldForDatabase(serverCode))
-                      refer(field.name)
+                  for (var field in fields.entries)
+                    if (field.value.shouldSerializeFieldForDatabase(serverCode))
+                      refer(field.key.name)
                 ]).code,
             ));
           }));
@@ -741,7 +747,7 @@ class ClassGeneratorDart extends ClassGenerator {
 
   // Handle enums.
   Library _generateEnumFile(EnumDefinition enumDefinition) {
-    String enumName = enumDefinition.className;
+    String enumName = enumDefinition.name;
 
     var library = Library((library) {
       library.body.add(
@@ -856,28 +862,28 @@ class ClassGeneratorDart extends ClassGenerator {
               'if(customConstructors.containsKey(t)){return customConstructors[t]!(data, this) as T;}'),
           ...(<Expression, Code>{
             for (var classInfo in classInfos)
-              refer(classInfo.className, classInfo.fileRef()): Code.scope(
-                  (a) => '${a(refer(classInfo.className, classInfo.fileRef()))}'
+              refer(classInfo.name, classInfo.fileRef()): Code.scope(
+                  (a) => '${a(refer(classInfo.name, classInfo.fileRef()))}'
                       '.fromJson(data'
                       '${classInfo is ClassDefinition ? ',this' : ''}) as T'),
             for (var classInfo in classInfos)
               refer('getType', serverpodUrl(serverCode)).call([], {}, [
                 TypeReference(
                   (b) => b
-                    ..symbol = classInfo.className
+                    ..symbol = classInfo.name
                     ..url = classInfo.fileRef()
                     ..isNullable = true,
                 )
               ]): Code.scope((a) => '(data!=null?'
-                  '${a(refer(classInfo.className, classInfo.fileRef()))}'
+                  '${a(refer(classInfo.name, classInfo.fileRef()))}'
                   '.fromJson(data'
                   '${classInfo is ClassDefinition ? ',this' : ''})'
                   ':null)as T'),
           }..addEntries([
                   for (var classInfo in classInfos)
                     if (classInfo is ClassDefinition)
-                      for (var field in classInfo.fields)
-                        ...field.type.generateDeserialization(serverCode),
+                      for (var field in classInfo.fields.entries)
+                        ...field.value.type.generateDeserialization(serverCode),
                   for (var endPoint in protocolDefinition.endpoints)
                     for (var method in endPoint.methods) ...[
                       ...method.returnType
@@ -933,7 +939,7 @@ class ClassGeneratorDart extends ClassGenerator {
                 'if(data is ${a(extraClass.reference(serverCode))}) {return \'${extraClass.className}\';}'),
           for (var classInfo in classInfos)
             Code.scope((a) =>
-                'if(data is ${a(refer(classInfo.className, classInfo.fileRef()))}) {return \'${classInfo.className}\';}'),
+                'if(data is ${a(refer(classInfo.name, classInfo.fileRef()))}) {return \'${classInfo.name}\';}'),
           const Code('return super.getClassNameForObject(data);'),
         ])),
       Method((m) => m
@@ -958,8 +964,8 @@ class ClassGeneratorDart extends ClassGenerator {
                 'return deserialize<${a(extraClass.reference(serverCode))}>(data[\'data\']);}'),
           for (var classInfo in classInfos)
             Code.scope((a) =>
-                'if(data[\'className\'] == \'${classInfo.className}\'){'
-                'return deserialize<${a(refer(classInfo.className, classInfo.fileRef()))}>(data[\'data\']);}'),
+                'if(data[\'className\'] == \'${classInfo.name}\'){'
+                'return deserialize<${a(refer(classInfo.name, classInfo.fileRef()))}>(data[\'data\']);}'),
           const Code('return super.deserializeByClassName(data);'),
         ])),
       if (serverCode)
@@ -992,8 +998,8 @@ class ClassGeneratorDart extends ClassGenerator {
                     if (classInfo is ClassDefinition &&
                         classInfo.tableName != null)
                       Code.scope((a) =>
-                          'case ${a(refer(classInfo.className, classInfo.fileRef()))}:'
-                          'return ${a(refer(classInfo.className, classInfo.fileRef()))}.t;'),
+                          'case ${a(refer(classInfo.name, classInfo.fileRef()))}:'
+                          'return ${a(refer(classInfo.name, classInfo.fileRef()))}.t;'),
                   const Code('}'),
                 ]),
               const Code('return null;'),
@@ -1019,38 +1025,4 @@ enum FieldScope {
   database,
   api,
   all,
-}
-
-class FieldDefinition {
-  final String name;
-  TypeDefinition type;
-
-  final FieldScope scope;
-  final String? parentTable;
-  final List<String>? documentation;
-
-  FieldDefinition({
-    required this.name,
-    required this.type,
-    required this.scope,
-    this.parentTable,
-    this.documentation,
-  });
-
-  bool shouldIncludeField(bool serverCode) {
-    if (serverCode) return true;
-    if (scope == FieldScope.all || scope == FieldScope.api) return true;
-    return false;
-  }
-
-  bool shouldSerializeField(bool serverCode) {
-    if (scope == FieldScope.all || scope == FieldScope.api) return true;
-    return false;
-  }
-
-  bool shouldSerializeFieldForDatabase(bool serverCode) {
-    assert(serverCode);
-    if (scope == FieldScope.all || scope == FieldScope.database) return true;
-    return false;
-  }
 }

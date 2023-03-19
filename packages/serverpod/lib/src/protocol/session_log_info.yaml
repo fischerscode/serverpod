@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://go.fischerscode.com/serverpod-schema
+
 ### Compounded information about a session log.
 class: SessionLogInfo
 fields:

@@ -6,7 +6,8 @@ import 'package:path/path.dart' as p;
 
 import 'class_generator_dart.dart';
 import 'config.dart';
-import 'protocol_definition.dart';
+import 'config/enum.dart';
+import 'config/files.dart';
 
 /// Contains information about the type of fields, arguments and return values.
 class TypeDefinition {
@@ -313,10 +314,29 @@ class TypeDefinition {
             .map((e) => e.applyProtocolReferences(classDefinitions))
             .toList(),
         isEnum: isEnum,
-        url:
-            url == null && classDefinitions.any((c) => c.className == className)
-                ? 'protocol'
-                : url);
+        url: url == null && classDefinitions.any((c) => c.name == className)
+            ? 'protocol'
+            : url);
+  }
+
+  TypeDefinition maybeMarkAsEnum(
+      List<ProtocolFileDefinition> classDefinitions) {
+    if (url == 'protocol' &&
+        classDefinitions
+            .whereType<EnumDefinition>()
+            .any((e) => e.name == className)) {
+      return TypeDefinition(
+        className: className,
+        nullable: nullable,
+        customClass: customClass,
+        dartType: dartType,
+        generics: generics,
+        isEnum: true,
+        url: url,
+      );
+    } else {
+      return this;
+    }
   }
 
   @override
